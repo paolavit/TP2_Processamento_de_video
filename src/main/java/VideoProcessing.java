@@ -1,5 +1,6 @@
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -16,6 +17,7 @@ public class VideoProcessing {
         nu.pattern.OpenCV.loadLocally();
     }
 
+
     public static byte[][][] carregarVideo(String caminho) {
 
         VideoCapture captura = new VideoCapture(caminho);
@@ -27,7 +29,7 @@ public class VideoProcessing {
         int largura = (int) captura.get(Videoio.CAP_PROP_FRAME_WIDTH);
         int altura = (int) captura.get(Videoio.CAP_PROP_FRAME_HEIGHT);
 
-        //não conhecço a quantidade dos frames (melhorar com outra lib) :(
+        //não conheço a quantidade dos frames (melhorar com outra lib) :(
         List<byte[][]> frames = new ArrayList<>();
            
         //matriz RGB mesmo preto e branco?? - uso na leitura do frame
@@ -99,9 +101,9 @@ public class VideoProcessing {
 
     public static void main(String[] args) {
 
-        String caminhoVideo = "D:\\Download\\video.mp4";
-        String caminhoGravar = "D:\\Download\\video2.mp4";
-        double fps = 21.0; //isso deve mudar se for outro vídeo (avaliar metadados ???)
+        String caminhoVideo = "C:\\Users\\paola\\OneDrive\\Desktop\\video.mp4";
+        String caminhoGravar = "C:\\Users\\paola\\OneDrive\\Desktop\\video2.mp4";
+        double fps = 24.0; //isso deve mudar se for outro vídeo (avaliar metadados ???)
 
         System.out.println("Carregando o vídeo... " + caminhoVideo);
         byte pixels[][][] = carregarVideo(caminhoVideo);
@@ -110,7 +112,7 @@ public class VideoProcessing {
                 pixels.length, pixels[0][0].length, pixels[0].length);
 
         System.out.println("processamento remove ruído 1");
-        //removerSalPimenta(pixels); //voce deve implementar esta funcao
+        removerSalPimenta(pixels); //voce deve implementar esta funcao
         
         System.out.println("processamento remove ruído 2");
         //removerBorroesTempo(pixels); //voce deve implementar esta funcao
@@ -118,5 +120,57 @@ public class VideoProcessing {
         System.out.println("Salvando...  " + caminhoGravar);
         gravarVideo(pixels, caminhoGravar, fps);
         System.out.println("Término do processamento");
+
+    }
+
+    private static void removerBorroesTempo(byte[][][] pixels) {
+        //remover borrões entre frames
+
+    }
+
+    private static void removerSalPimenta(byte[][][] pixels) {
+    //remover borrões do tipo "Sal e pimenta"
+
+        //percorre todos os frames
+        for(int i = 0; i<pixels.length; i++){
+            //percorre as linhas de cada frame
+            for(int y = 0; y < pixels[0].length; y++){
+                //percorre as colunas de cada frame
+                for(int x=0; x< pixels[0][0].length; x++){
+                    //confere se vizinhos estão dentro dos limites
+                        ArrayList<Integer> vizinhos = new ArrayList<>();
+
+                        //perccorendo "visinhos" do pixel
+                        for(int visinhosY = -1; visinhosY<=1; visinhosY++){
+                            for(int visinhoX = -1; visinhoX<=1; visinhoX++){
+                                int coordenadaY = y + visinhosY;
+                                int coodenadaX =  x + visinhoX;
+
+                                //acresentando ao array apenas os vizinhos válidos (que existam)
+                                if(coordenadaY >= 0 && coordenadaY < pixels[0].length && coodenadaX >= 0 && coodenadaX < pixels[0][0].length){
+                                    int valor = pixels[i][coordenadaY][coodenadaX] & 0xFF;
+                                    vizinhos.add(valor);
+                                }
+                            }
+                        }
+
+                        //calculando a mediana
+                        //ordenando array
+                        Collections.sort(vizinhos);
+                        //pegando indice da mediana
+                        int indiceMediana = vizinhos.size()/2;
+                        //pega valor que esta no indiceMediana
+                        int mediana = vizinhos.get(indiceMediana);
+                        //atualiza o pixel com valor da mediana
+                        pixels[i][y][x] = (byte)mediana;
+
+
+                }
+            }
+        }
+
+
+
+
     }
 }

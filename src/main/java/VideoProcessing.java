@@ -131,43 +131,41 @@ public class VideoProcessing {
     private static void removerSalPimenta(byte[][][] pixels) {
     //remover borrões do tipo "Sal e pimenta"
 
-        //percorre todos os frames
-        for(int i = 0; i<pixels.length; i++){
-            //percorre as linhas de cada frame
-            for(int y = 0; y < pixels[0].length; y++){
-                //percorre as colunas de cada frame
-                for(int x=0; x< pixels[0][0].length; x++){
-                    //confere se vizinhos estão dentro dos limites
-                        ArrayList<Integer> vizinhos = new ArrayList<>();
+    int numThreads = 4; // 2,4,8,16,32
+        //guarda a quantidade de frames
+        int qFrames = pixels.length;
+        //calcula quantidade de frames por threads
+        int framesPorThreads = qFrames / numThreads;
 
-                        //perccorendo "visinhos" do pixel
-                        for(int visinhosY = -1; visinhosY<=1; visinhosY++){
-                            for(int visinhoX = -1; visinhoX<=1; visinhoX++){
-                                int coordenadaY = y + visinhosY;
-                                int coodenadaX =  x + visinhoX;
-
-                                //acresentando ao array apenas os vizinhos válidos (que existam)
-                                if(coordenadaY >= 0 && coordenadaY < pixels[0].length && coodenadaX >= 0 && coodenadaX < pixels[0][0].length){
-                                    int valor = pixels[i][coordenadaY][coodenadaX] & 0xFF;
-                                    vizinhos.add(valor);
-                                }
-                            }
-                        }
-
-                        //calculando a mediana
-                        //ordenando array
-                        Collections.sort(vizinhos);
-                        //pegando indice da mediana
-                        int indiceMediana = vizinhos.size()/2;
-                        //pega valor que esta no indiceMediana
-                        int mediana = vizinhos.get(indiceMediana);
-                        //atualiza o pixel com valor da mediana
-                        pixels[i][y][x] = (byte)mediana;
+        //instancia uma nova Thread
+        Thread[] threads = new Thread[numThreads];
 
 
-                }
-            }
+        for(int i = 0; i<numThreads; i++){
+            //define o frame que a thread irá começar a percorrer
+            int inicio = i*framesPorThreads;
+
+            //verifica se é a última thread
+            //se for, fim = quantidade de frames
+            //senão, fim = inicio + quantidade de frames por thread (para processar somente sua faixa)
+            int fim = (i==numThreads-1) ? qFrames : inicio + framesPorThreads;
+
+            threads[i] = new FiltroThreads(pixels, inicio, fim);
+            //iciando a thread
+            threads[i].start();
         }
+
+        //percorrendo todas as threads
+        for(Thread t: threads){
+          try{
+              //espera uma thread terinar antes de passar para a próxima
+              t.join();
+          }catch (InterruptedException e){
+              e.printStackTrace();
+          }
+        }
+
+
 
 
 

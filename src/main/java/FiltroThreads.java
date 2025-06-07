@@ -23,10 +23,10 @@ public class FiltroThreads extends Thread{
                     ArrayList<Integer> vizinhos = new ArrayList<>();
 
                     //percorrendo "vizinhos" do pixel
-                    for (int visinhosY = -1; visinhosY <= 1; visinhosY++) {
-                        for (int visinhoX = -1; visinhoX <= 1; visinhoX++) {
-                            int coordenadaY = y + visinhosY;
-                            int coodenadaX = x + visinhoX;
+                    for (int vizinhosY = -1; vizinhosY <= 1; vizinhosY++) {
+                        for (int vizinhoX = -1; vizinhoX <= 1; vizinhoX++) {
+                            int coordenadaY = y + vizinhosY;
+                            int coodenadaX = x + vizinhoX;
 
                             //acresentando ao array apenas os vizinhos válidos (que existam)
                             if (coordenadaY >= 0 && coordenadaY < pixels[0].length && coodenadaX >= 0 && coodenadaX < pixels[0][0].length) {
@@ -36,13 +36,14 @@ public class FiltroThreads extends Thread{
                         }
                     }
 
-                    //calculando a mediana
-                    //ordenando array
-                    Collections.sort(vizinhos);
-                    //pega valor que esta no indiceMediana
-                    int mediana = vizinhos.get(vizinhos.size() / 2);
+                    //calculando a média
+                    int soma = 0;
+                    for(int valor : vizinhos){
+                        soma += valor;
+                    }
+                    int media = soma / vizinhos.size();
                     //atualiza o pixel com valor da mediana
-                    pixels[i][y][x] = (byte) mediana;
+                    pixels[i][y][x] = (byte) media;
                 }
             }
         }

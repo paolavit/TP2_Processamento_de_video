@@ -1,6 +1,5 @@
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.opencv.core.CvType;
@@ -30,7 +29,7 @@ public class VideoProcessing {
         int largura = (int) captura.get(Videoio.CAP_PROP_FRAME_WIDTH);
         int altura = (int) captura.get(Videoio.CAP_PROP_FRAME_HEIGHT);
 
-        //não conheço a quantidade dos frames (melhorar com outra lib) :(
+        //não conhecço a quantidade dos frames (melhorar com outra lib) :(
         List<byte[][]> frames = new ArrayList<>();
 
         //matriz RGB mesmo preto e branco?? - uso na leitura do frame
@@ -52,6 +51,7 @@ public class VideoProcessing {
                 for (int x = 0; x < largura; x++) {
                     pixels[y][x] = (byte) (linha[x] & 0xFF); //shift de correção - unsig
                 }
+
             }
             frames.add(pixels);
         }
@@ -100,10 +100,11 @@ public class VideoProcessing {
         escritor.release(); //limpando o buffer 
     }
 
+
     public static void main(String[] args) {
 
-        String caminhoVideo = "C:\\Users\\paola\\OneDrive\\Desktop\\video3.mp4";
-        String caminhoGravar = "C:\\Users\\paola\\OneDrive\\Desktop\\video2.mp4";
+        String caminhoVideo = "C:\\Users\\55319\\OneDrive\\Desktop\\VideoProcessing\\TP2_Processamento_de_video\\src\\main\\resources\\video.mp4";
+        String caminhoGravar = "C:\\Users\\55319\\OneDrive\\Desktop\\VideoProcessing\\TP2_Processamento_de_video\\src\\main\\resources\\video2.mp4";
         double fps = 24.0; //isso deve mudar se for outro vídeo (avaliar metadados ???)
 
         System.out.println("Carregando o vídeo... " + caminhoVideo);
@@ -117,7 +118,7 @@ public class VideoProcessing {
         removerSalPimenta(pixels); //voce deve implementar esta funcao
 
         System.out.println("processamento remove ruído 2");
-        //removerBorroesTempo(pixels); //voce deve implementar esta funcao
+        removerBorroesTempo(pixels,3,0.20); //voce deve implementar esta funcao
 
         long endTime = System.currentTimeMillis();
         double durationSeconds = (endTime - startTime) / 1000.0;
@@ -129,13 +130,97 @@ public class VideoProcessing {
         System.out.println("Tempo de execução: " + durationSeconds + " segundos");
     }
 
-    private static void removerBorroesTempo(byte[][][] pixels) {
-        //remover borrões entre frames
 
+    public static  void removerBorroesTempo(byte[][][] cuboPixels, int vizinhosQtd, double taxaVariacao){
+        int numThreads = 8; //0 para sequencial, 2/4/8/16 para paralelo
+        int qFrames = cuboPixels.length;
+        if (numThreads > 0){
+            //calcula o número de frames para cada thread
+            int framesPorThreads = qFrames / numThreads;
+
+            Thread[] threads = new Thread[numThreads];
+
+            for (int i = 0; i < numThreads; i++) {
+                //calcula o índice inicial do intervalo de frames que a thread irá processar
+                int inicio = i * framesPorThreads;
+                // Calcula o índice final do intervalo de frames para a thread i.
+                // Se for a última thread, processa até o último frame (qFrames),
+                // caso contrário, processa até inicio + framesPorThreads
+                int fim = (i == numThreads - 1) ? qFrames : inicio + framesPorThreads;
+
+                //cria uma nova thread do tipo FiltroThreads, que processará os frames
+                threads[i] = new FiltroThreadsBorroes(cuboPixels,inicio, fim, vizinhosQtd,taxaVariacao);
+                threads[i].start();
+            }
+            //para cada thread criada, espera a sua finalização para garantir que
+            //todas as threads terminem o processamento antes de salvar o arquivo
+            for (Thread t : threads) {
+                try {
+                    t.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            aplicarFiltroBorroesTempo( cuboPixels, vizinhosQtd, taxaVariacao,0, cuboPixels.length);
+        }
+    }
+    public static void aplicarFiltroBorroesTempo(byte[][][] cuboPixels, int vizinhosQtd, double taxaVariacao, int inicio, int fim) {
+        //Navega nos frames
+        for (int frame = inicio; frame < fim; frame++) {
+            //navega nas linhas do frame
+            for (int y = 0; y < cuboPixels[frame].length; y++) {
+                //navega nas colunas do frame
+                for (int x = 0; x < cuboPixels[frame][y].length; x++) {
+
+                    int valorDoPixel = cuboPixels[frame][y][x] & 0xFF;
+                    boolean precisaCorrigir = false;
+                    List<Integer> vizinhos = new ArrayList<>();
+
+                    // Coleta os vizinhos válidos com base no parâmetro vizinhosQtd
+                    for (int frameVizinhoAtual = -vizinhosQtd; frameVizinhoAtual <= vizinhosQtd; frameVizinhoAtual++) {
+                        //pula o proprio frame
+                        if (frameVizinhoAtual == 0) continue;
+
+
+                        int frameVizinhoIndex = frame + frameVizinhoAtual;
+                        //verifica se o index esta dentro do intervalo
+                        if (frameVizinhoIndex >= 0 && frameVizinhoIndex < cuboPixels.length) {
+                            int val = cuboPixels[frameVizinhoIndex][y][x] & 0xFF;
+                            vizinhos.add(val);
+
+                            double dif = Math.abs(valorDoPixel - val) / 255.0;
+                            if (dif > taxaVariacao) precisaCorrigir = true;
+                        }
+                    }
+
+                    // corrige usando média
+                    if (precisaCorrigir) {
+                       //vizinhos.add(valorDoPixel);
+
+                        int soma = 0;
+                        for (int valor : vizinhos) {
+                            soma += valor;
+                        }
+
+                        int media = soma / vizinhos.size();
+
+                        // Atualiza o pixel atual
+                        cuboPixels[frame][y][x] = (byte) media;
+                    }
+                }
+            }
+        }
     }
 
+
+
+
+
+
+
     private static void removerSalPimenta(byte[][][] pixels) {
-        int numThreads = 4; //0 para sequencial, 2/4/8/16 para paralelo
+        int numThreads = 8; //0 para sequencial, 2/4/8/16 para paralelo
         int qFrames = pixels.length;
 
         //verifica se será sequencial ou paralelo

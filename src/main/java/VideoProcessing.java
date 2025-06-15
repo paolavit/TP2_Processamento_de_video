@@ -103,8 +103,10 @@ public class VideoProcessing {
 
     public static void main(String[] args) {
 
-        String caminhoVideo = "C:\\Users\\55319\\OneDrive\\Desktop\\VideoProcessing\\TP2_Processamento_de_video\\src\\main\\resources\\video.mp4";
-        String caminhoGravar = "C:\\Users\\55319\\OneDrive\\Desktop\\VideoProcessing\\TP2_Processamento_de_video\\src\\main\\resources\\video2.mp4";
+        //String caminhoVideo = "C:\\Users\\55319\\OneDrive\\Desktop\\VideoProcessing\\TP2_Processamento_de_video\\src\\main\\resources\\video.mp4";
+        //String caminhoGravar = "C:\\Users\\55319\\OneDrive\\Desktop\\VideoProcessing\\TP2_Processamento_de_video\\src\\main\\resources\\video2.mp4";
+        String caminhoVideo = "C:\\Users\\paola\\OneDrive\\Desktop\\video3.mp4";
+        String caminhoGravar = "C:\\Users\\paola\\OneDrive\\Desktop\\video2.mp4";
         double fps = 24.0; //isso deve mudar se for outro vídeo (avaliar metadados ???)
 
         System.out.println("Carregando o vídeo... " + caminhoVideo);
@@ -118,7 +120,7 @@ public class VideoProcessing {
         removerSalPimenta(pixels); //voce deve implementar esta funcao
 
         System.out.println("processamento remove ruído 2");
-        removerBorroesTempo(pixels,3,0.20); //voce deve implementar esta funcao
+        removerBorroesTempo(pixels,3,0.50); //voce deve implementar esta funcao
 
         long endTime = System.currentTimeMillis();
         double durationSeconds = (endTime - startTime) / 1000.0;
@@ -148,7 +150,7 @@ public class VideoProcessing {
                 // caso contrário, processa até inicio + framesPorThreads
                 int fim = (i == numThreads - 1) ? qFrames : inicio + framesPorThreads;
 
-                //cria uma nova thread do tipo FiltroThreads, que processará os frames
+                //cria uma nova thread do tipo FiltroThreadsBorroes, que processará os frames
                 threads[i] = new FiltroThreadsBorroes(cuboPixels,inicio, fim, vizinhosQtd,taxaVariacao);
                 threads[i].start();
             }
@@ -213,13 +215,7 @@ public class VideoProcessing {
         }
     }
 
-
-
-
-
-
-
-    private static void removerSalPimenta(byte[][][] pixels) {
+    public static void removerSalPimenta(byte[][][] pixels) {
         int numThreads = 8; //0 para sequencial, 2/4/8/16 para paralelo
         int qFrames = pixels.length;
 
@@ -259,7 +255,7 @@ public class VideoProcessing {
         }
     }
 
-    private static void aplicarFiltroSalPimenta(byte[][][] pixels, int inicio, int fim) {
+    public static void aplicarFiltroSalPimenta(byte[][][] pixels, int inicio, int fim) {
 
         //percorre os frames
         for (int i = inicio; i < fim; i++) {
